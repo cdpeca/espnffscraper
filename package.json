@@ -1,0 +1,10 @@
+{
+  "name": "espnffscraper",
+  "version": "1.0.0",
+  "description": "Fantasy Football scraper for ESPN leagues using ESPN APIs and generating some statistics",
+  "main": "espnffscraper.py",
+  "repository": "https://github.com/cdpeca/espnffscraper.git",
+  "author": "cdpeca <chrispeca+github@hotmail.com>",
+  "license": "MIT",
+  "private": false
+}
