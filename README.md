@@ -22,7 +22,7 @@ You will need your **league** id and **year**. For private leagues you will also
 python3 espnffscraper.py
 ```
 
-As of now this will extract your league information and make available for you to access as you want. Currently it will generate a couple charts:
+As of now this will extract your league information and make available for you to access as you want. Currently it will generate a couple charts...
 - Win/Loss Margins for League by Regular and Playoff Seasons
 - Lucky/Unlucky Wins and Losses for each team
 
