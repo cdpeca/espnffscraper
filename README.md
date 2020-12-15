@@ -16,7 +16,7 @@ python3 setup.py install
 
 ## Usage
 
-You will need your **league** id and **year**. For private leagues you will also need two more parameters; your **swid** and **espn_s2** or **username** and **password**. To find your **swid** and **espn_s2** check out this [discussion](https://github.com/cwendt94/espn-api/discussions/150)! I would suggest to still login with your credentials even if your leage is public so that you will be ale to use the recent activity feature (not yet implemented).
+You will need your **league_id** and **year**. For private leagues you will also need two more parameters; your **swid** and **espn_s2** or **username** and **password**. To find your **swid** and **espn_s2** check out this [discussion](https://github.com/cwendt94/espn-api/discussions/150), from the creator of espn-api. I would suggest to still login with your credentials even if your league is public so that you will be ale to use the recent activity feature (not yet implemented).
 
 ```sh
 python3 espnffscraper.py
