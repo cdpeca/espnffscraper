@@ -17,6 +17,8 @@ from request.espn_requests import EspnFantasyRequests
 from utils.logger import Logger
 from base_settings import BaseSettings
 from constant import POSITION_MAP, ACTIVITY_MAP
+import sys
+
 
 year = 2020
 league_open_to_public = False
@@ -26,6 +28,12 @@ espn_s2 = espn_s2
 cookies = None
 sport='nfl'
 debug=False
+
+if len(sys.argv) > 1:
+    if sys.argv[1] == '--debug':
+        debug = True
+
+
 logger = Logger(name=f'{sport} league for espnffscraper', debug=debug)
 teams = []
 draft = []
@@ -129,6 +137,9 @@ def create_team_dataframe():
     df_team = pd.DataFrame(df_team, columns=['teamID', 'teamName'])
     df_team.set_index('teamID', inplace=True)
     #print(f"\n === df_team DataFrame [{len(df_team)} rows x {len(df_team.columns)} columns] ==== \n{df_team}\n")
+    if logger:
+        logger.log_dataframe(df_team)
+
     
     return df_team
 

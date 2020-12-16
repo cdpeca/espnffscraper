@@ -38,8 +38,8 @@ class EspnFantasyRequests(object):
         r = requests.get(endpoint, params=params, headers=headers, cookies=self.cookies)
         checkRequestStatus(r.status_code)
 
-        if self.logger:
-            self.logger.log_request(endpoint=endpoint, params=params, headers=headers, response=r.json())
+#        if self.logger:
+#            self.logger.log_request(endpoint=endpoint, params=params, headers=headers, response=r.json())
         return r.json() if self.year > 2017 else r.json()[0]
     
     def get(self, params: dict = None, headers: dict = None, extend: str = ''):
