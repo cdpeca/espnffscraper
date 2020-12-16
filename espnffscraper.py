@@ -1,27 +1,53 @@
 import pandas as pd
 import numpy as np
 import seaborn as sns
-from constants.priv_constants import swid, espn_s2, league_id
-from espn_api.football import League
-import requests
+#import requests
 import json
 import os
-from pathlib import Path
 #import mplcairo # on macOS this module must be explicitly be imported before importing matplotlib
 import matplotlib
 #matplotlib.use("module://mplcairo.macosx")
 import matplotlib.pyplot as plt
-
+from constants.priv_constants import swid, espn_s2, league_id
+#from espn_api.football import League
+from pathlib import Path
+#from base_league import BaseLeague
+#from requests.espn_requests import EspnFantasyRequests
+from request.espn_requests import EspnFantasyRequests
+from utils.logger import Logger
+from base_settings import BaseSettings
+from constant import POSITION_MAP, ACTIVITY_MAP
 
 year = 2020
 league_open_to_public = False
 league_id = league_id
 swid = swid
 espn_s2 = espn_s2
+cookies = None
+sport='nfl'
+debug=False
+logger = Logger(name=f'{sport} league for espnffscraper', debug=debug)
+teams = []
+draft = []
+player_map = {}
+
+if espn_s2 and swid:
+    cookies = {
+        'espn_s2': espn_s2,
+        'SWID': swid
+    }
+
+
+espn_request = EspnFantasyRequests(sport=sport, year=year, league_id=league_id, cookies=cookies, logger=logger)
+d = espn_request.get_league()
+
+
+
+
 
 
 def construct_url():
-    """Construct a url based on year of league"""
+#    """Construct a url based on year of league"""
     
     '''
     ESPN has completely different API enpoints for leagues in current year vs. historical leages
@@ -45,6 +71,8 @@ def construct_url():
     return league_matchup_url
 
 
+
+
 def fetch_league_data():
     """Make a call to ESPN API using url and necessary parameters, load JSON response into a local data structure"""
 
@@ -58,7 +86,7 @@ def fetch_league_data():
         swid
         espn_s2
     '''
-
+    
     if league_open_to_public:
         r = requests.get(url)
     else:
@@ -72,7 +100,7 @@ def fetch_league_data():
     For historical leagues the JSON structure is returned in a list of length one, i.e. [0]
     '''
 
-    if year == 2020:
+    if year > 2017:
         d = r.json()
     else:
         d = r.json()[0] 
@@ -81,6 +109,7 @@ def fetch_league_data():
     #    json.dump(d, json_file)
 
     return d
+
 
 
 def create_team_dataframe():
@@ -99,7 +128,8 @@ def create_team_dataframe():
                     teams['location'] + " " + teams['nickname']])
     df_team = pd.DataFrame(df_team, columns=['teamID', 'teamName'])
     df_team.set_index('teamID', inplace=True)
-    print(f"\n === df_team DataFrame [{len(df_team)} rows x {len(df_team.columns)} columns] ==== \n{df_team}\n")
+    #print(f"\n === df_team DataFrame [{len(df_team)} rows x {len(df_team.columns)} columns] ==== \n{df_team}\n")
+    
     return df_team
 
 
@@ -136,7 +166,7 @@ def determine_win_loss_margins():
     
     # Create dataframe to stage data for this plot
     df_winlossmargin = df_matchup_merge.assign(Margin1 = df_matchup_merge['homeScore'] - df_matchup_merge['awayScore'],
-                                        Margin2 = df_matchup_merge['awayScore'] - df_matchup_merge['homeScore'])
+                                                Margin2 = df_matchup_merge['awayScore'] - df_matchup_merge['homeScore'])
     df_winlossmargin = (df_winlossmargin[['Week', 'homeTeam', 'Margin1', 'Type']]
         .rename(columns={'homeTeam': 'Team', 'Margin1': 'Margin'})
         .append(df_winlossmargin[['Week', 'awayTeam', 'Margin2', 'Type']]
@@ -155,14 +185,14 @@ def determine_win_loss_margins():
     ax.set_xlabel('')
     ax.set_title('Win/Loss Margins')
 
+    #plt.show()
+
     return df_matchup_merge
 
+def calculate_weekly_averages():
+    """ calculate average scores per week for the league """
 
-def determine_lucky_results(team, teamName):
-    """Generate charts showing lucky/unlucky wins and losses"""
-   
 
-    # calculate average score per week
     df_avgs = (df_matchup_merge
         .filter(['Week', 'homeScore', 'awayScore'])
         .melt(id_vars=['Week'], value_name='Score')
@@ -171,6 +201,13 @@ def determine_lucky_results(team, teamName):
         .reset_index()
     )
     #print(f"\n === df_avgs DataFrame [{len(df_avgs)} rows x {len(df_avgs.columns)} columns] === \n{df_avgs.head()}")
+
+    return df_avgs
+
+
+def determine_lucky_results(team, teamName):
+    """Generate charts showing lucky/unlucky wins and losses"""
+
 
     # grab all games with this team
     df_team_luck = df_matchup_merge.query('homeID == @team | awayID == @team').reset_index(drop=True)
@@ -255,16 +292,20 @@ def determine_lucky_results(team, teamName):
                         xytext=(0,10), # distance from text to points (x,y)
                         ha='center') # horizontal alignment can be left, right or center
 
+    #plt.show()
 
 
-url = construct_url()
+#url = construct_url()
 
-d = fetch_league_data()
+#d = fetch_league_data()
 
 df_team = create_team_dataframe()
 
 df_matchup_merge = determine_win_loss_margins()
 
+df_avgs = calculate_weekly_averages()
+
+#for i in range(1):
 for i in range(len(df_team)):
     team = list(df_team.index.values.tolist())[i]
     teamName = df_team.iloc[i, 0]
