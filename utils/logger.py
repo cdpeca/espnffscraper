@@ -23,8 +23,9 @@ class Logger(object):
         log = f'ESPN API Request: url: {endpoint} params: {params} headers: {headers} \nESPN API Response: {response}'
         self.logging.debug(log)
 
-    def log_ohter(self, endpoint: str, response: dict, params: dict = None, headers: dict = None):
-        log = f'ESPN API Request: url: {endpoint} params: {params} headers: {headers} \nESPN API Response: {response}'
+    def log_dataframe(self, dataframe_argument):
+        dataframe = dataframe_argument
+        log = f'\n === dataframe DataFrame [{len(dataframe)} rows x {len(dataframe.columns)} columns] ==== \n{dataframe}\n'
         self.logging.debug(log)
 
 
