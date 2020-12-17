@@ -23,9 +23,8 @@ class Logger(object):
         log = f'ESPN API Request: url: {endpoint} params: {params} headers: {headers} \nESPN API Response: {response}'
         self.logging.debug(log)
 
-    def log_dataframe(self, dataframe_argument):
-        dataframe = dataframe_argument
-        log = f'\n === dataframe DataFrame [{len(dataframe)} rows x {len(dataframe.columns)} columns] ==== \n{dataframe}\n'
+    def log_dataframe(self, dataframe, dataframe_name: str = ""):
+        log = f'\n === dataframe {dataframe_name} [{len(dataframe)} rows x {len(dataframe.columns)} columns] ==== \n{dataframe}\n'
         self.logging.debug(log)
 
 
