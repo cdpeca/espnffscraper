@@ -29,15 +29,14 @@ cookies = None
 sport='nfl'
 debug=False
 
-if len(sys.argv) > 1:
-    if sys.argv[1] == '--debug':
+
+for i in range(len(sys.argv)):
+    if sys.argv[i] == '--debug':
         debug = True
 
 
 logger = Logger(name=f'{sport} league for espnffscraper', debug=debug)
-teams = []
-draft = []
-player_map = {}
+
 
 if espn_s2 and swid:
     cookies = {
@@ -49,7 +48,17 @@ if espn_s2 and swid:
 espn_request = EspnFantasyRequests(sport=sport, year=year, league_id=league_id, cookies=cookies, logger=logger)
 d = espn_request.get_league()
 
+SettingsClass = BaseSettings
+currentMatchupPeriod = d['status']['currentMatchupPeriod']
+scoringPeriodId = d['scoringPeriodId']
+firstScoringPeriod = d['status']['firstScoringPeriod']
+if year < 2018:
+    current_week = d['scoringPeriodId']
+else:
+    current_week = scoringPeriodId if scoringPeriodId <=  d['status']['finalScoringPeriod'] else d['status']['finalScoringPeriod']
+settings = SettingsClass(d['settings'])
 
+nfl_week = d['status']['latestScoringPeriod']
 
 
 
@@ -138,8 +147,8 @@ def create_team_dataframe():
     df_team.set_index('teamID', inplace=True)
     #print(f"\n === df_team DataFrame [{len(df_team)} rows x {len(df_team.columns)} columns] ==== \n{df_team}\n")
     if logger:
-        logger.log_dataframe(df_team)
-
+        logger.log_dataframe(df_team, 'df_team')
+    
     
     return df_team
 
@@ -156,10 +165,12 @@ def determine_win_loss_margins():
         else:
             df_matchup.append([game['matchupPeriodId'],
                         game['home']['teamId'], game['home']['totalPoints'],
-                        0, 0])
+                        'BYE', 0])
     df_matchup = pd.DataFrame(df_matchup, columns=['Week', 'homeID', 'homeScore', 'awayID', 'awayScore'])
     df_matchup['Type'] = ['Regular' if w<=13 else 'Playoff' for w in df_matchup['Week']]
     #print(f"\n === df_matchup DataFrame [{len(df_matchup)} rows x {len(df_matchup.columns)} columns] === \n{df_matchup.head()}")
+    if logger:
+        logger.log_dataframe(df_matchup, 'df_matchup')
 
     '''
         Get the Team Names added
@@ -169,11 +180,16 @@ def determine_win_loss_margins():
 
     df_matchup_merge = pd.merge(df_team, df_matchup, how='outer', on=None, left_on='teamID', right_on='homeID', left_index=False, right_index=False, sort=False)
     df_matchup_merge.rename(columns={'teamName':'homeTeam'}, inplace=True)
+    df_matchup_merge['homeTeam'].fillna(value='BYE', inplace=True)
     #print(f"\n === df_matchup_merge DataFrame [{len(df_matchup_merge)} rows x {len(df_matchup_merge.columns)} columns] === \n{df_matchup_merge.head()}")
 
     df_matchup_merge = pd.merge(df_team, df_matchup_merge, how='outer', on=None, left_on='teamID', right_on='awayID', left_index=False, right_index=False, sort=False)
     df_matchup_merge.rename(columns={'teamName':'awayTeam'}, inplace=True)
+    df_matchup_merge['awayTeam'].fillna(value='BYE', inplace=True)
+    
     #print(f"\n === df_matchup_merge DataFrame [{len(df_matchup_merge)} rows x {len(df_matchup_merge.columns)} columns] === \n{df_matchup_merge.head()}")
+    if logger:
+        logger.log_dataframe(df_matchup_merge, 'df_matchup_merge')
     
     # Create dataframe to stage data for this plot
     df_winlossmargin = df_matchup_merge.assign(Margin1 = df_matchup_merge['homeScore'] - df_matchup_merge['awayScore'],
@@ -184,6 +200,8 @@ def determine_win_loss_margins():
         .rename(columns={'awayTeam': 'Team', 'Margin2': 'Margin'}))
     )
     #print(f"\n === df_winlossmargin DataFrame [{len(df_winlossmargin)} rows x {len(df_winlossmargin.columns)} columns] === \n{df_winlossmargin.head()}\n")
+    if logger:
+        logger.log_dataframe(df_winlossmargin, 'df_winlossmargin')
 
     # Create a boxplot for the win/loss margine separated by regular season and playoffs
     fig, ax = plt.subplots(1,1, figsize=(10,10))
@@ -212,6 +230,8 @@ def calculate_weekly_averages():
         .reset_index()
     )
     #print(f"\n === df_avgs DataFrame [{len(df_avgs)} rows x {len(df_avgs.columns)} columns] === \n{df_avgs.head()}")
+    if logger:
+        logger.log_dataframe(df_avgs, 'df_avgs')
 
     return df_avgs
 
@@ -221,21 +241,33 @@ def determine_lucky_results(team, teamName):
 
 
     # grab all games with this team
-    df_team_luck = df_matchup_merge.query('homeID == @team | awayID == @team').reset_index(drop=True)
+#    df_team_luck = df_matchup_merge.query('homeID == @team | awayID == @team').reset_index(drop=True)
+    df_team_luck = df_matchup_merge.query('(homeID == @team | awayID == @team) & Week <= 14').reset_index(drop=True)
 
     # move the team of interest to "homeTeam" column
     ix = list(df_team_luck['awayID'] == team)
     df_team_luck.loc[ix, ['homeID','homeTeam','homeScore','awayID','awayTeam','awayScore']] = \
         df_team_luck.loc[ix, ['awayID','awayTeam','awayScore','homeID','homeTeam','homeScore']].values
-
+    
     # add new score and wins columns
     df_team_luck = (df_team_luck
         .assign(Chg1 = df_team_luck['homeScore'] - df_avgs['Score'],
                 Chg2 = df_team_luck['awayScore'] - df_avgs['Score'],
                 Win = df_team_luck['homeScore'] > df_team_luck['awayScore'])
     )
-    df_team_luck.sort_values(by=['Week'], inplace=True, ascending=True)
+    # Replace BYE week opponent scopes of 0 with the weekly average
+    df_team_luck.loc[df_team_luck.awayScore == 0, 'Chg2'] = 0
+    
+    # Replace BYE week opponent scopes of 0 with the weekly average -- longer way of doing it
+    '''
+    mask = df_team_luck.awayScore == 0
+    column_name = 'Chg2'
+    df_team_luck.loc[mask, column_name] = 0
+    '''
+    df_team_luck.sort_values(by=['Week'], inplace=True, ascending=True)   
     #print(f"\n === df_team_luck DataFrame [{len(df_team_luck)} rows x {len(df_team_luck.columns)} columns] === \n{df_team_luck}")
+    if logger:
+        logger.log_dataframe(df_team_luck, f'df_team_luck==> {team}: {teamName}')
 
     # VISUALIZE now that we have average weekly scores and team lucky/unlucy data
 

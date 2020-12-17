@@ -8,6 +8,9 @@ venv/
 build
 dist
 env
-coverage
+coverage/
 constants/
 mplcairo/
+.eggs/
+*.egg-info
+.DS_Store
