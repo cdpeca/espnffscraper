@@ -8,7 +8,7 @@ import os
 import matplotlib
 #matplotlib.use("module://mplcairo.macosx")
 import matplotlib.pyplot as plt
-from constants.priv_constants import swid, espn_s2, league_id
+from constants.priv_constants import swid, espn_s2, league_id, year, sport, league_open_to_public
 #from espn_api.football import League
 from pathlib import Path
 #from base_league import BaseLeague
@@ -20,116 +20,45 @@ from constant import POSITION_MAP, ACTIVITY_MAP
 import sys
 
 
-year = 2020
-league_open_to_public = False
-league_id = league_id
-swid = swid
-espn_s2 = espn_s2
-cookies = None
-sport='nfl'
-debug=False
+
+def fetch_league():
+    """ Construct the URL for API call and fetch all league data """
+
+    cookies = None
+    debug=False
 
 
-for i in range(len(sys.argv)):
-    if sys.argv[i] == '--debug':
-        debug = True
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == '--debug':
+            debug = True
 
+    logger = Logger(name=f'{sport} league for espnffscraper', debug=debug)
 
-logger = Logger(name=f'{sport} league for espnffscraper', debug=debug)
+    if espn_s2 and swid:
+        cookies = {
+            'espn_s2': espn_s2,
+            'SWID': swid
+        }
 
+    espn_request = EspnFantasyRequests(sport=sport, year=year, league_id=league_id, cookies=cookies, logger=logger)
+    d = espn_request.get_league()
 
-if espn_s2 and swid:
-    cookies = {
-        'espn_s2': espn_s2,
-        'SWID': swid
-    }
-
-
-espn_request = EspnFantasyRequests(sport=sport, year=year, league_id=league_id, cookies=cookies, logger=logger)
-d = espn_request.get_league()
-
-SettingsClass = BaseSettings
-currentMatchupPeriod = d['status']['currentMatchupPeriod']
-scoringPeriodId = d['scoringPeriodId']
-firstScoringPeriod = d['status']['firstScoringPeriod']
-if year < 2018:
-    current_week = d['scoringPeriodId']
-else:
-    current_week = scoringPeriodId if scoringPeriodId <=  d['status']['finalScoringPeriod'] else d['status']['finalScoringPeriod']
-settings = SettingsClass(d['settings'])
-
-nfl_week = d['status']['latestScoringPeriod']
-
-
-
-
-def construct_url():
-#    """Construct a url based on year of league"""
-    
-    '''
-    ESPN has completely different API enpoints for leagues in current year vs. historical leages
-    Depending on the year being scraped need to construct the correct API endpoint
-    '''
-
-    if year == 2020:
-        league_matchup_url = "https://fantasy.espn.com/apis/v3/games/ffl/seasons/" + \
-            str(year) + \
-            "/segments/0/leagues/" + \
-            str(league_id) + \
-            "?view=mTeam&view=mRoster&view=mMatchup&view=mSettings"
+    SettingsClass = BaseSettings
+    currentMatchupPeriod = d['status']['currentMatchupPeriod']
+    scoringPeriodId = d['scoringPeriodId']
+    firstScoringPeriod = d['status']['firstScoringPeriod']
+    if year < 2018:
+        current_week = d['scoringPeriodId']
     else:
+        current_week = scoringPeriodId if scoringPeriodId <=  d['status']['finalScoringPeriod'] else d['status']['finalScoringPeriod']
+    settings = SettingsClass(d['settings'])
+    nfl_week = d['status']['latestScoringPeriod']    
 
-        league_matchup_url = "https://fantasy.espn.com/apis/v3/games/ffl/leagueHistory/" + \
-            str(league_id) + \
-            "?seasonId=" + \
-            str(year) + \
-            "?view=mTeam&view=mRoster&view=mMatchup&view=mSettings"
-    #print(f"league_matchup_url ==> {league_matchup_url}")
-    return league_matchup_url
+    return d, logger, settings, currentMatchupPeriod
 
 
 
-
-def fetch_league_data():
-    """Make a call to ESPN API using url and necessary parameters, load JSON response into a local data structure"""
-
-    '''
-    Public vs. Private Leagues
-
-    If league is viewable to public can just call the API 
-    If league is not viewable to public need to call the API with some stored session cookies
-    for now these need to be stored/input in ./constants/priv_constants.py
-        league_id
-        swid
-        espn_s2
-    '''
-    
-    if league_open_to_public:
-        r = requests.get(url)
-    else:
-        r = requests.get(url, cookies={"swid":swid, "espn_s2":espn_s2})
-
-
-    '''
-    Locally store the returned json data
-
-    For leagues in the current year a regular JSON structure is returned
-    For historical leagues the JSON structure is returned in a list of length one, i.e. [0]
-    '''
-
-    if year > 2017:
-        d = r.json()
-    else:
-        d = r.json()[0] 
-
-    #with open('apidump.json', 'w') as json_file:
-    #    json.dump(d, json_file)
-
-    return d
-
-
-
-def create_team_dataframe():
+def create_team_dataframe(d, logger):
     """Fetch all of the teams in the league and construct the team name"""
 
     '''
@@ -153,7 +82,8 @@ def create_team_dataframe():
     return df_team
 
 
-def determine_win_loss_margins():
+
+def determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team):
     """Generate a chart showing margins of wins and losses for each team in league, broken out by regular and playoff seasons"""
 
     df_matchup = []
@@ -215,11 +145,9 @@ def determine_win_loss_margins():
     ax.set_xlabel('')
     ax.set_title('Win/Loss Margins')
 
-    #plt.show()
-
     return df_matchup_merge
 
-def calculate_weekly_averages():
+def calculate_weekly_averages(df_matchup_merge, logger):
     """ calculate average scores per week for the league """
 
 
@@ -237,7 +165,8 @@ def calculate_weekly_averages():
     return df_avgs
 
 
-def determine_lucky_results(team, teamName):
+
+def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMatchupPeriod, df_avgs):
     """Generate charts showing lucky/unlucky wins and losses"""
 
 
@@ -347,75 +276,119 @@ def determine_lucky_results(team, teamName):
                         xytext=(0,10), # distance from text to points (x,y)
                         ha='center') # horizontal alignment can be left, right or center
 
-    #plt.show()
 
 
-#url = construct_url()
+def construct_url():
+    """Construct a url based on year of league"""
+    
+    '''
+    ESPN has completely different API enpoints for leagues in current year vs. historical leages
+    Depending on the year being scraped need to construct the correct API endpoint
+    '''
 
-#d = fetch_league_data()
+    if year == 2020:
+        league_matchup_url = "https://fantasy.espn.com/apis/v3/games/ffl/seasons/" + \
+            str(year) + \
+            "/segments/0/leagues/" + \
+            str(league_id) + \
+            "?view=mTeam&view=mRoster&view=mMatchup&view=mSettings"
+    else:
 
-df_team = create_team_dataframe()
-
-df_matchup_merge = determine_win_loss_margins()
-
-df_avgs = calculate_weekly_averages()
-
-#for i in range(1):
-for i in range(len(df_team)):
-    team = list(df_team.index.values.tolist())[i]
-    teamName = df_team.iloc[i, 0]
-    determine_lucky_results(team, teamName)
-
-#plt.tight_layout()
-plt.show()
-
-
-'''
-espn-api module
-https://github.com/cwendt94/espn-api.git
-
-Enable use of espn-api Python module
-'''
-
-# public league
-#league = League(league_id=league_id, year=year)
-
-# private league with cookies
-#league = League(league_id=league_id, year=year, espn_s2=espn_s2, swid=swid)
-
-# private league with username and password
-#league = League(league_id=league_id, year=year, username='userName', password='pass')
-
-# debug mode
-#league = League(league_id=league_id, year=year, debug=True)
+        league_matchup_url = "https://fantasy.espn.com/apis/v3/games/ffl/leagueHistory/" + \
+            str(league_id) + \
+            "?seasonId=" + \
+            str(year) + \
+            "?view=mTeam&view=mRoster&view=mMatchup&view=mSettings"
+    #print(f"league_matchup_url ==> {league_matchup_url}")
+    return league_matchup_url
 
 
 
+def fetch_league_data():
+    """Make a call to ESPN API using url and necessary parameters, load JSON response into a local data structure"""
 
-'''
-Console debugging
+    '''
+    Public vs. Private Leagues
 
-Various output options for basic testing and debugging
-'''
+    If league is viewable to public can just call the API 
+    If league is not viewable to public need to call the API with some stored session cookies
+    for now these need to be stored/input in ./constants/priv_constants.py
+        league_id
+        swid
+        espn_s2
+    '''
+    
+    if league_open_to_public:
+        r = requests.get(url)
+    else:
+        r = requests.get(url, cookies={"swid":swid, "espn_s2":espn_s2})
+
+    '''
+    Locally store the returned json data
+
+    For leagues in the current year a regular JSON structure is returned
+    For historical leagues the JSON structure is returned in a list of length one, i.e. [0]
+    '''
+
+    if year > 2017:
+        d = r.json()
+    else:
+        d = r.json()[0] 
+
+    #with open('apidump.json', 'w') as json_file:
+    #    json.dump(d, json_file)
+
+    return d
 
 
-'''
-print(f"\nLeague Standings ==> {league.standings()}\n")
-print(f"League Top PF ==> {league.top_scorer()}\n")
-print(f"League Least PF ==> {league.least_scorer()}\n")
-print(f"League Top PA ==> {league.most_points_against()}\n")
-print(f"League Top Scored Week ==> {league.top_scored_week()}\n")
-print(f"League Least Scored Week ==> {league.least_scored_week()}\n")
-print(f"League Box Scores ==> {league.box_scores(1)}\n")
-print(f"League Scoreboard ==> {league.scoreboard(1)}\n")
-print(f"Leage Power Rankings ==> {league.power_rankings()}")
-'''
+def use_espnapi_module():
+    """ Make use of pre-built espn-api module """
+    
+    '''
+    espn-api module
+    https://github.com/cwendt94/espn-api.git
 
-'''
-print(f"league_summary_url={league_summary_url}")
-print(f"league_matchup_url={league_matchup_url}")
-print(f"text={r.text}")
-print(f"json={d}")
-'''
+    Enable use of espn-api Python module
+    '''
 
-print(f"")
+    # public league
+    #league = League(league_id=league_id, year=year)
+
+    # private league with cookies
+    #league = League(league_id=league_id, year=year, espn_s2=espn_s2, swid=swid)
+
+    # private league with username and password
+    #league = League(league_id=league_id, year=year, username='userName', password='pass')
+
+    # debug mode
+    #league = League(league_id=league_id, year=year, debug=True)
+
+
+
+def main():
+    """ main() function """
+
+
+    #url = construct_url()
+
+    #d = fetch_league_data()
+    d, logger, settings, currentMatchupPeriod = fetch_league()
+
+    df_team = create_team_dataframe(d, logger)
+
+    df_matchup_merge = determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team)
+
+    df_avgs = calculate_weekly_averages(df_matchup_merge, logger)
+
+    #for i in range(1):
+    for i in range(len(df_team)):
+        team = list(df_team.index.values.tolist())[i]
+        teamName = df_team.iloc[i, 0]
+        determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMatchupPeriod, df_avgs)
+
+    #plt.tight_layout()
+    plt.show()
+
+if __name__ == '__main__':
+    main()
+
