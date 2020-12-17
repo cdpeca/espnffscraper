@@ -158,11 +158,11 @@ def determine_win_loss_margins():
 
     df_matchup = []
     for game in d['schedule']:
-        if 'away' in game:
+        if 'away' in game and game['matchupPeriodId'] < (currentMatchupPeriod + 1):
             df_matchup.append([game['matchupPeriodId'],
                         game['home']['teamId'], game['home']['totalPoints'],
                         game['away']['teamId'], game['away']['totalPoints']])
-        else:
+        elif 'home' in game and game['matchupPeriodId'] < (currentMatchupPeriod + 1):
             df_matchup.append([game['matchupPeriodId'],
                         game['home']['teamId'], game['home']['totalPoints'],
                         'BYE', 0])
@@ -197,8 +197,9 @@ def determine_win_loss_margins():
     df_winlossmargin = (df_winlossmargin[['Week', 'homeTeam', 'Margin1', 'Type']]
         .rename(columns={'homeTeam': 'Team', 'Margin1': 'Margin'})
         .append(df_winlossmargin[['Week', 'awayTeam', 'Margin2', 'Type']]
-        .rename(columns={'awayTeam': 'Team', 'Margin2': 'Margin'}))
-    )
+        .rename(columns={'awayTeam': 'Team', 'Margin2': 'Margin'})))
+    index_names = df_winlossmargin[df_winlossmargin['Team'] == 'BYE' ].index
+    df_winlossmargin.drop(index_names, inplace=True)
     #print(f"\n === df_winlossmargin DataFrame [{len(df_winlossmargin)} rows x {len(df_winlossmargin.columns)} columns] === \n{df_winlossmargin.head()}\n")
     if logger:
         logger.log_dataframe(df_winlossmargin, 'df_winlossmargin')
@@ -242,7 +243,7 @@ def determine_lucky_results(team, teamName):
 
     # grab all games with this team
 #    df_team_luck = df_matchup_merge.query('homeID == @team | awayID == @team').reset_index(drop=True)
-    df_team_luck = df_matchup_merge.query('(homeID == @team | awayID == @team) & Week <= 14').reset_index(drop=True)
+    df_team_luck = df_matchup_merge.query('(homeID == @team | awayID == @team) & Week < @currentMatchupPeriod').reset_index(drop=True)
 
     # move the team of interest to "homeTeam" column
     ix = list(df_team_luck['awayID'] == team)
@@ -253,9 +254,9 @@ def determine_lucky_results(team, teamName):
     df_team_luck = (df_team_luck
         .assign(Chg1 = df_team_luck['homeScore'] - df_avgs['Score'],
                 Chg2 = df_team_luck['awayScore'] - df_avgs['Score'],
-                Win = df_team_luck['homeScore'] > df_team_luck['awayScore'])
-    )
-    # Replace BYE week opponent scopes of 0 with the weekly average
+                Win = df_team_luck['homeScore'] > df_team_luck['awayScore']))
+
+    # Replace BYE week opponent scores of 0 with the weekly average
     df_team_luck.loc[df_team_luck.awayScore == 0, 'Chg2'] = 0
     
     # Replace BYE week opponent scopes of 0 with the weekly average -- longer way of doing it
@@ -264,6 +265,7 @@ def determine_lucky_results(team, teamName):
     column_name = 'Chg2'
     df_team_luck.loc[mask, column_name] = 0
     '''
+
     df_team_luck.sort_values(by=['Week'], inplace=True, ascending=True)   
     #print(f"\n === df_team_luck DataFrame [{len(df_team_luck)} rows x {len(df_team_luck.columns)} columns] === \n{df_team_luck}")
     if logger:
@@ -280,16 +282,26 @@ def determine_lucky_results(team, teamName):
     ax.fill_between([0,z], [0,z], z, facecolor='r', alpha=0.1)
     ax.fill_between([-z,0], [-z,0], 0, facecolor='r', alpha=0.1)
 
-    ax.scatter(data=df_team_luck.query('Win'), x='Chg1', y='Chg2', 
-            c=['b' if t=='Regular' else 'r' for t in df_team_luck.query('Win')['Type']], 
-            s=100,
-            marker='o',
-            label='Win')
-    ax.scatter(data=df_team_luck.query('not Win'), x='Chg1', y='Chg2', 
-            c=['b' if t=='Regular' else 'r' for t in df_team_luck.query('not Win')['Type']], 
-            s=100,
-            marker='x',
-            label='Loss')
+    ax.scatter(data=df_team_luck.query('Win and (Type == "Regular")'), x='Chg1', y='Chg2', 
+        c='b', 
+        s=100,
+        marker='o',
+        label='Win - Regular Season') 
+    ax.scatter(data=df_team_luck.query('Win and (Type == "Playoff")'), x='Chg1', y='Chg2', 
+        c='r', 
+        s=100,
+        marker='o',
+        label='Win - Playoffs') 
+    ax.scatter(data=df_team_luck.query('(not Win) and (Type == "Regular")'), x='Chg1', y='Chg2', 
+        c='b', 
+        s=100,
+        marker='x',
+        label='Loss - Regular Season') 
+    ax.scatter(data=df_team_luck.query('(not Win) and (Type == "Playoff")'), x='Chg1', y='Chg2', 
+        c='r', 
+        s=100,
+        marker='x',
+        label='Loss - Playoffs') 
     ax.plot([-z,z],[-z,z], 'k--')
     ax.legend()
 
@@ -315,7 +327,7 @@ def determine_lucky_results(team, teamName):
     ax.text(z/2-5, z-8, 'UNLUCKY\n   LOSS', style='italic', color='red')
     ax.text(z-12, z/2-5, 'LUCKY\n WIN', style='italic', color='blue')
 
-    ax.set(title='Team #%s Scores (centered at league average)' % teamName)
+    ax.set(title='Team %s Scores (centered at league average)' % teamName)
 
     # use annotation function to assign labels (i.e. opponent team anme) to each plotted data point
     # ... ideally this could be done as the point were added to the scatter chart
@@ -354,6 +366,7 @@ for i in range(len(df_team)):
     teamName = df_team.iloc[i, 0]
     determine_lucky_results(team, teamName)
 
+#plt.tight_layout()
 plt.show()
 
 
