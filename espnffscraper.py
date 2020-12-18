@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import seaborn as sns
-#import requests
+import requests
 import json
 import os
 #import mplcairo # on macOS this module must be explicitly be imported before importing matplotlib
@@ -9,15 +9,14 @@ import matplotlib
 #matplotlib.use("module://mplcairo.macosx")
 import matplotlib.pyplot as plt
 from constants.priv_constants import swid, espn_s2, league_id, year, sport, league_open_to_public
-#from espn_api.football import League
 from pathlib import Path
-#from base_league import BaseLeague
-#from requests.espn_requests import EspnFantasyRequests
 from request.espn_requests import EspnFantasyRequests
 from utils.logger import Logger
 from base_settings import BaseSettings
 from constant import POSITION_MAP, ACTIVITY_MAP
 import sys
+#from espn_api.football import League # if you want to use this need to pip install espn-api
+
 
 
 
@@ -144,6 +143,11 @@ def determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team):
     ax.axhline(0, ls='--')
     ax.set_xlabel('')
     ax.set_title('Win/Loss Margins')
+    
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout(pad=3)
+
+    plt.savefig(f'plots/winlossmargins.png')
 
     return df_matchup_merge
 
@@ -275,6 +279,10 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
                         textcoords="offset points", # how to position the texxt
                         xytext=(0,10), # distance from text to points (x,y)
                         ha='center') # horizontal alignment can be left, right or center
+    
+    plt.tight_layout(pad=3)
+
+    plt.savefig(f'plots/{teamName}-lucky_unlucky_wins_losses')
 
 
 
@@ -386,7 +394,6 @@ def main():
         teamName = df_team.iloc[i, 0]
         determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMatchupPeriod, df_avgs)
 
-    #plt.tight_layout()
     plt.show()
 
 if __name__ == '__main__':
