@@ -51,9 +51,10 @@ def fetch_league():
     else:
         current_week = scoringPeriodId if scoringPeriodId <=  d['status']['finalScoringPeriod'] else d['status']['finalScoringPeriod']
     settings = SettingsClass(d['settings'])
-    nfl_week = d['status']['latestScoringPeriod']    
+    nfl_week = d['status']['latestScoringPeriod']
+    leagueName = np.char.strip(d['settings']['name'])
 
-    return d, logger, settings, currentMatchupPeriod
+    return d, logger, settings, currentMatchupPeriod, leagueName
 
 
 
@@ -82,7 +83,7 @@ def create_team_dataframe(d, logger):
 
 
 
-def determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team):
+def determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team, leagueName):
     """Generate a chart showing margins of wins and losses for each team in league, broken out by regular and playoff seasons"""
 
     df_matchup = []
@@ -147,7 +148,12 @@ def determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team):
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout(pad=3)
 
-    plt.savefig(f'plots/winlossmargins.png')
+    script_dir = os.path.dirname(__file__)
+    relative_results_dir = f'plots/{leagueName}/'
+    results_dir = os.path.join(script_dir, relative_results_dir)
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
+    plt.savefig(f'{results_dir}/winlossmargins.png', dpi=300, transparent=False)
 
     return df_matchup_merge
 
@@ -170,7 +176,7 @@ def calculate_weekly_averages(df_matchup_merge, logger):
 
 
 
-def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMatchupPeriod, df_avgs):
+def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMatchupPeriod, df_avgs,leagueName):
     """Generate charts showing lucky/unlucky wins and losses"""
 
 
@@ -257,9 +263,10 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
 
     ax.text(z-10, -12, 'Points \n  for', style='italic')
     ax.text(-18, z-10, ' Points \nagainst', style='italic')
-    ax.text(z/2-5, z-8, 'UNLUCKY\n   LOSS', style='italic', color='red')
-    ax.text(z-12, z/2-5, 'LUCKY\n WIN', style='italic', color='blue')
-
+    ax.text(z/2-5, z-8, 'UNLUCKY LOSS\nw/ high points', style='italic', color='red')
+    ax.text(z-20, z/2-5, 'LUCKY WIN\nw/ high points', style='italic', color='blue')
+    ax.text(-z+1, -z/2-15, 'UNLUCKY LOSS\nw/ low points', style='italic', color='red')
+    ax.text(-z+10, -z+1, 'LUCKY WIN\nw/ low points', style='italic', color='blue')
     ax.set(title='Team %s Scores (centered at league average)' % teamName)
 
     # use annotation function to assign labels (i.e. opponent team anme) to each plotted data point
@@ -282,7 +289,12 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
     
     plt.tight_layout(pad=3)
 
-    plt.savefig(f'plots/{teamName}-lucky_unlucky_wins_losses')
+    script_dir = os.path.dirname(__file__)
+    relative_results_dir = f'plots/{leagueName}/'
+    results_dir = os.path.join(script_dir, relative_results_dir)
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
+    plt.savefig(f'{results_dir}{teamName}-lucky_unlucky_wins_losses', dpi=300, transparent=False)
 
 
 
@@ -290,7 +302,7 @@ def construct_url():
     """Construct a url based on year of league"""
     
     '''
-    ESPN has completely different API enpoints for leagues in current year vs. historical leages
+    ESPN has completely different API enpoints for leagues in current year vs. historical leagues
     Depending on the year being scraped need to construct the correct API endpoint
     '''
 
@@ -380,11 +392,11 @@ def main():
     #url = construct_url()
 
     #d = fetch_league_data()
-    d, logger, settings, currentMatchupPeriod = fetch_league()
+    d, logger, settings, currentMatchupPeriod, leagueName = fetch_league()
 
     df_team = create_team_dataframe(d, logger)
 
-    df_matchup_merge = determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team)
+    df_matchup_merge = determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team, leagueName)
 
     df_avgs = calculate_weekly_averages(df_matchup_merge, logger)
 
@@ -392,9 +404,11 @@ def main():
     for i in range(len(df_team)):
         team = list(df_team.index.values.tolist())[i]
         teamName = df_team.iloc[i, 0]
-        determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMatchupPeriod, df_avgs)
+        determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMatchupPeriod, df_avgs, leagueName)
 
     plt.show()
+
+    print(f'Files generate. Are you lucky or unlucky?')
 
 if __name__ == '__main__':
     main()
