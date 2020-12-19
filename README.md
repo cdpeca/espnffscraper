@@ -16,13 +16,13 @@ python3 setup.py install
 
 ## Usage
 
-You will need your **league_id** and **year**. For private leagues you will also need two more parameters; your **swid** and **espn_s2** or **username** and **password**. To find your **swid** and **espn_s2** check out this [discussion](https://github.com/cwendt94/espn-api/discussions/150), from the creator of espn-api. I would suggest to still login with your credentials even if your league is public so that you will be ale to use the recent activity feature (not yet implemented).
+You will need your **league_id** and **year**. For private leagues you will also need two more parameters; your **swid** and **espn_s2** or **username** and **password**. To find your **swid** and **espn_s2** check out this [discussion](https://github.com/cwendt94/espn-api/discussions/150), from the creator of espn-api. A portion of this utility is based oo espn-api (mostly the initial API constructor as it's wonderfully built). I would suggest to still login with your credentials even if your league is public so that you will be ale to use the recent activity feature (although I haven't implemented that yet).
 
 ```sh
 python3 espnffscraper.py
 ```
 
-As of now this will extract your league information and make available for you to access as you want. Currently it will generate a couple charts...
+As of now this will extract your league information and make all the league data available for you to access, analyze and manipulate how you want. Currently it will generate a couple of interesting statstical analysis charts...
 - Win/Loss Margins for League by Regular and Playoff Seasons
 - Lucky/Unlucky Wins and Losses for each team
 
