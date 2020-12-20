@@ -82,7 +82,7 @@ def create_team_dataframe(d, logger):
 
 
 
-def determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team, leagueName):
+def create_matchup_data(d, currentMatchupPeriod, logger, df_team):
     """Generate a chart showing margins of wins and losses for each team in league, broken out by regular and playoff seasons"""
 
     df_matchup = []
@@ -120,6 +120,12 @@ def determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team, leagueN
     if logger:
         logger.log_dataframe(df_matchup_merge, 'df_matchup_merge')
     
+    return df_matchup_merge
+
+
+
+def determine_win_loss_margins(df_matchup_merge, logger, leagueName):
+
     # Create dataframe to stage data for this plot
     df_winlossmargin = df_matchup_merge.assign(Margin1 = df_matchup_merge['homeScore'] - df_matchup_merge['awayScore'],
                                                 Margin2 = df_matchup_merge['awayScore'] - df_matchup_merge['homeScore'])
@@ -143,7 +149,7 @@ def determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team, leagueN
     ax.axhline(0, ls='--')
     ax.set_xlabel('')
     ax.set_title('Win/Loss Margins')
-    
+
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout(pad=3)
 
@@ -152,9 +158,9 @@ def determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team, leagueN
     results_dir = os.path.join(script_dir, relative_results_dir)
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
-    plt.savefig(f'{results_dir}/winlossmargins.png', dpi=300, transparent=False)
+    plt.savefig(f'{results_dir}/winlossmargins.png', dpi=100, transparent=False)
 
-    return df_matchup_merge
+
 
 def calculate_weekly_averages(df_matchup_merge, logger):
     """ calculate average scores per week for the league """
@@ -293,7 +299,7 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
     results_dir = os.path.join(script_dir, relative_results_dir)
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
-    plt.savefig(f'{results_dir}{teamName}-lucky_unlucky_wins_losses', dpi=300, transparent=False)
+    plt.savefig(f'{results_dir}{teamName}-lucky_unlucky_wins_losses', dpi=100, transparent=False)
 
 
 
@@ -398,8 +404,10 @@ def main():
 
     df_team = create_team_dataframe(d, logger)
 
-    df_matchup_merge = determine_win_loss_margins(d, currentMatchupPeriod, logger, df_team, leagueName)
-
+    df_matchup_merge = create_matchup_data(d, currentMatchupPeriod, logger, df_team)
+    
+    determine_win_loss_margins(df_matchup_merge, logger, leagueName)
+    
     df_avgs = calculate_weekly_averages(df_matchup_merge, logger)
 
     for i in range(len(df_team)):
@@ -408,7 +416,7 @@ def main():
         determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMatchupPeriod, df_avgs, leagueName)
 
     plt.show()
-
+    
     print(f'Files generated. Are you lucky or unlucky?')
 
 if __name__ == '__main__':
