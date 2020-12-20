@@ -15,7 +15,6 @@ from utils.logger import Logger
 from base_settings import BaseSettings
 from constant import POSITION_MAP, ACTIVITY_MAP
 import sys
-#from espn_api.football import League # if you want to use this need to pip install espn-api
 
 
 
@@ -355,43 +354,46 @@ def fetch_league_data():
     else:
         d = r.json()[0] 
 
+    # This is useful if you want to dump the requested data into a json file for analysis of the data structure
     #with open('apidump.json', 'w') as json_file:
     #    json.dump(d, json_file)
 
     return d
 
 
-def use_espnapi_module():
-    """ Make use of pre-built espn-api module """
-    
-    '''
-    espn-api module
-    https://github.com/cwendt94/espn-api.git
-
-    Enable use of espn-api Python module
-    '''
-
-    # public league
-    #league = League(league_id=league_id, year=year)
-
-    # private league with cookies
-    #league = League(league_id=league_id, year=year, espn_s2=espn_s2, swid=swid)
-
-    # private league with username and password
-    #league = League(league_id=league_id, year=year, username='userName', password='pass')
-
-    # debug mode
-    #league = League(league_id=league_id, year=year, debug=True)
-
-
 
 def main():
     """ main() function """
 
+    '''
+    To run the program...
+        python3 espnffscraper.py
+    If you want to see output of the data to the console run debug mode
+        python3 espnffscraper.py --debug
+    If you want to put debug data in a file pipe to a file
+        python3 espnffscraper.py --debub > debut.txt (or any filename yuo want)
 
+    
+    Public vs. Private Leagues
+        If league is viewable to public can just call the API 
+        If league is not viewable to public need to call the API with some stored session cookies
+    
+    For now these need to be stored/input in ./constants/priv_constants.py
+        league_id = <your league ID>
+        swid = <your swid>
+        espn_s2 = <your espn_s2>
+        year = <your league year>
+        league_open_to_public = <True/False, if your league is viewable to public or pivate
+        sport = 'nfl' -- This would also technically work with a NBA league as well
+    '''
+
+
+    # deprecating this function in favor for fetch_league(), althogh this works just fine
     #url = construct_url()
 
+    # depreciating this function in favor of fetch_league(), although this works just fine
     #d = fetch_league_data()
+
     d, logger, settings, currentMatchupPeriod, leagueName = fetch_league()
 
     df_team = create_team_dataframe(d, logger)
@@ -400,7 +402,6 @@ def main():
 
     df_avgs = calculate_weekly_averages(df_matchup_merge, logger)
 
-    #for i in range(1):
     for i in range(len(df_team)):
         team = list(df_team.index.values.tolist())[i]
         teamName = df_team.iloc[i, 0]
@@ -408,7 +409,7 @@ def main():
 
     plt.show()
 
-    print(f'Files generate. Are you lucky or unlucky?')
+    print(f'Files generated. Are you lucky or unlucky?')
 
 if __name__ == '__main__':
     main()

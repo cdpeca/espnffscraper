@@ -16,18 +16,18 @@ python3 setup.py install
 
 ## Usage
 
-You will need your **league_id** and **year**. For private leagues you will also need two more parameters; your **swid** and **espn_s2** or **username** and **password**. To find your **swid** and **espn_s2** check out this [discussion](https://github.com/cwendt94/espn-api/discussions/150), from the creator of espn-api. A portion of this utility is based oo espn-api (mostly the initial API constructor as it's wonderfully built). I would suggest to still login with your credentials even if your league is public so that you will be ale to use the recent activity feature (although I haven't implemented that yet).
+To utilize the program you will need your **league_id** and **year**. If you are using on private leagues you will also need two more parameters; your **swid** and **espn_s2** or **username** and **password**. To find your **swid** and **espn_s2** check out this [discussion](https://github.com/cwendt94/espn-api/discussions/150), from the creator of [espn-api](https://github.com/cwendt94/espn-api). A portion of this program is based on [espn-api](https://github.com/cwendt94/espn-api) (mostly the initial API URL constructor as it's abolustely wonderfully built). I would recommend to use credentials with your **swid** and **espn_s2** so it will work properly on both public and private leagues. This would also enable being able to use activity functions (although I haven't implemented that yet as this is really for some statiscal analysis).
 
 ```sh
 python3 espnffscraper.py
 ```
 
-As of now this will extract your league information and make all the league data available for you to access, analyze and manipulate how you want. Currently it will generate a couple of interesting statstical analysis charts...
+As of now this will extract your league information and make all the league data available for you to access, analyze and manipulate how you want. Currently it will generate a couple of interesting statstical analysis plots...
+
 - Win/Loss Margins for League by Regular and Playoff Seasons
 - Lucky/Unlucky Wins and Losses for each team
 
-
-
+It will also save the plots to high-resolution image files in a /plots folder which you can share with your league members to aid in trash-talking. :-)
 
 ## 🤝 Contributing
 
