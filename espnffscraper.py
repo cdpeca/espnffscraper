@@ -129,7 +129,7 @@ def create_matchup_data(d, currentMatchupPeriod, logger, df_team):
 
 
 
-def create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchupPeriod):
+def create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchupPeriod, leagueName):
     """ Create data strucuture to store relative records by week and by season """
 
 
@@ -180,49 +180,30 @@ def create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchu
     if logger:
         logger.log_dataframe(df_relative_record_total, 'df_relative_record_total')
 
-    fig, ax = plt.subplots(1,1, figsize=(10,10))
+    df_relative_record_total_plot = pd.DataFrame(df_relative_record_total, columns=['teamName', 'relative_record_total'])
+    df_relative_record_total_plot.sort_values(by=['relative_record_total'], inplace=True, ascending=False)
 
-    # hide axes
-    fig.patch.set_visible(False)
-    ax.axis('off')
-    ax.axis('tight')
+    #pd.set_option('display.max_rows', None)
+    #pd.set_option('display.max_columns', None)
+    if logger:
+        logger.log_dataframe(df_relative_record_total_plot, 'df_relative_record_total_plot')
 
-    ax.table(cellText=df_relative_record_total.values, colLabels=df_relative_record_total.columns, loc='center')
-
-    fig.tight_layout()
-
-    #plt.show()
-
-
-    '''
-    # EXAMPLE FROM https://towardsdatascience.com/simple-little-tables-with-matplotlib-9780ef5d0bc4
 
     # Let's try and create a nice looking table in matplotlib for the relative record summary data!!
+    # GREAT REFERENCE EXAMPLE FOR FORMATTING A TABLE FROM https://towardsdatascience.com/simple-little-tables-with-matplotlib-9780ef5d0bc4
 
-    title_text = 'Overall Relative Records'
-    footer_text = 'as of Week <variablize this>'
+    title_text = 'Overall Relative Results\n(from regular season only)'
+    footer_text = f'as of Week {currentMatchupPeriod}'
     fig_background_color = 'skyblue'
     fig_border = 'steelblue'
 
-    data =  [
-                [         'Freeze', 'Wind', 'Flood', 'Quake', 'Hail'],
-                [ '5 year',  66386, 174296,   75131,  577908,  32015],
-                ['10 year',  58230, 381139,   78045,   99308, 160454],
-                ['20 year',  89135,  80552,  152558,  497981, 603535],
-                ['30 year',  78415,  81858,  150656,  193263,  69638],
-                ['40 year', 139361, 331509,  343164,  781380,  52269],
-            ]
-
-    print(f'data table\n{data}')
-
     # Pop the headers from the dataframe
-    column_headers = data.pop(0)
-    row_headers = [x.pop(0) for x in data]
+    column_headers = df_relative_record_total_plot.columns
+    #row_headers = [x.pop(0) for x in df_relative_record_total]
+    row_headers = df_relative_record_total_plot['teamName']
 
     # Table data needs to be non-numeric text. Format the data while we are at it
-    cell_text = []
-    for row in data:
-        cell_text.append([f'{x/1000:1.1f}' for x in row])
+    cell_text = df_relative_record_total_plot.values
 
     # Get some lists of color specs for row and column headers
     rcolors = plt.cm.BuPu(np.full(len(row_headers), 0.1))
@@ -235,13 +216,13 @@ def create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchu
             edgecolor=fig_border,
             facecolor=fig_background_color,
             tight_layout={'pad':1},
-            #figsize=(5,3)
+            figsize=(10,10)
             )
 
     # Add a table at the bottom of the axes
     the_table = plt.table(cellText=cell_text,
-                        rowLabels=row_headers,
-                        rowColours=rcolors,
+                        #rowLabels=row_headers,
+                        #rowColours=rcolors,
                         rowLoc='right',
                         colColours=ccolors,
                         colLabels=column_headers,
@@ -249,7 +230,7 @@ def create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchu
 
     # Scaling is the only influence we have over top and bottom cell padding.
     # Make the rows taller (i.e., make cell y scale larger).
-    the_table.scale(1, 1.5)
+    the_table.scale(1, 2.0)
     # Hide axes
     ax = plt.gca()
     ax.get_xaxis().set_visible(False)
@@ -258,7 +239,7 @@ def create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchu
     # Hide axes border
     plt.box(on=None)
     # Add title
-    plt.suptitle(title_text)
+    plt.suptitle(title_text, ha='center', va='top', fontsize=20)
     # Add footer
     plt.figtext(0.95, 0.05, footer_text, horizontalalignment='right', size=6, weight='light')
     # Force the figure to update, so backends center objects correctly within the figure.
@@ -267,19 +248,34 @@ def create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchu
     # Create image. plt.savefig ignores figure edge and face colors, so map them.
     fig = plt.gcf()
 
-    plt.savefig('pyplot-table-demo.png',
-                #bbox='tight',
-                edgecolor=fig.get_edgecolor(),
-                facecolor=fig.get_facecolor(),
-                dpi=100
-                )
 
-    plt.show()
+    '''
+    # Basic example way to plot a table in matplotlib to get ride of default axes but no other formatting
+
+    #fig, ax = plt.subplots(1,1, figsize=(10,10))
+
+    # hide axes
+    #fig.patch.set_visible(False)
+    #ax.axis('off')
+    #ax.axis('tight')
+
+    #ax.table(cellText=cell_text, colLabels=column_headers, loc='center')
+
+    #fig.tight_layout()
     '''
 
 
+    plt.tight_layout(pad=3)
 
-    return df_relative_record, df_relative_record_total
+    script_dir = os.path.dirname(__file__)
+    relative_results_dir = f'plots/{leagueName}/'
+    results_dir = os.path.join(script_dir, relative_results_dir)
+    if not os.path.isdir(results_dir):
+        os.makedirs(results_dir)
+    plt.savefig(f'{results_dir}overall_relative_results', dpi=100, transparent=False)
+
+
+    return df_relative_record, df_relative_record_total, df_relative_record_total_plot
 
 
 
@@ -464,7 +460,7 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
 
 
 
-def construct_url():
+def construct_url(): # deprecating this function in favor for fetch_league(), althogh this works just fine
     """Construct a url based on year of league"""
 
     '''
@@ -490,7 +486,7 @@ def construct_url():
 
 
 
-def fetch_league_data():
+def fetch_league_data(): # depreciating this function in favor of fetch_league(), although this works just fine
     """Make a call to ESPN API using url and necessary parameters, load JSON response into a local data structure"""
 
     '''
@@ -567,7 +563,7 @@ def main():
 
     df_matchup_merge = create_matchup_data(d, currentMatchupPeriod, logger, df_team)
 
-    df_relative_record, df_relative_record_total  = create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchupPeriod)
+    df_relative_record, df_relative_record_total, df_relative_record_total_plot  = create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchupPeriod, leagueName)
 
     determine_win_loss_margins(df_matchup_merge, logger, leagueName)
 
