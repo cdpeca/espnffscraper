@@ -97,6 +97,7 @@ def create_matchup_data(d, currentMatchupPeriod, logger, df_team):
                         'BYE', 0])
     df_matchup = pd.DataFrame(df_matchup, columns=['Week', 'homeID', 'homeScore', 'awayID', 'awayScore'])
     df_matchup['Type'] = ['Regular' if w<=13 else 'Playoff' for w in df_matchup['Week']]
+    #df_matchup.drop(df_matchup[df_matchup['Week'] >= currentMatchupPeriod].index, inplace=True)
     #print(f"\n === df_matchup DataFrame [{len(df_matchup)} rows x {len(df_matchup.columns)} columns] === \n{df_matchup.head()}")
     if logger:
         logger.log_dataframe(df_matchup, 'df_matchup')
@@ -115,12 +116,72 @@ def create_matchup_data(d, currentMatchupPeriod, logger, df_team):
     df_matchup_merge = pd.merge(df_team, df_matchup_merge, how='outer', on=None, left_on='teamID', right_on='awayID', left_index=False, right_index=False, sort=False)
     df_matchup_merge.rename(columns={'teamName':'awayTeam'}, inplace=True)
     df_matchup_merge['awayTeam'].fillna(value='BYE', inplace=True)
-    
+
+    df_matchup_merge = df_matchup_merge[['Week', 'Type', 'homeID', 'homeTeam', 'homeScore', 'awayID', 'awayTeam', 'awayScore']]
+    df_matchup_merge.sort_values(by=['Week', 'homeID'], inplace=True)
+    df_matchup_merge.reset_index(inplace=True, drop=True)
+
     #print(f"\n === df_matchup_merge DataFrame [{len(df_matchup_merge)} rows x {len(df_matchup_merge.columns)} columns] === \n{df_matchup_merge.head()}")
     if logger:
         logger.log_dataframe(df_matchup_merge, 'df_matchup_merge')
     
     return df_matchup_merge
+
+
+
+def create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchupPeriod):
+    """ Create data strucuture to store relative records by week and by season """
+
+
+    if currentMatchupPeriod > 13:
+        relative_range = 13
+    else:
+        relative_range = currentMatchupPeriod -1
+
+    df_relative_record_home = df_matchup_merge.query('Week <= @relative_range')
+    df_relative_record_home = df_relative_record_home.rename(columns = {'homeID':'team1ID','homeTeam':'team1Name','homeScore':'team1Score','awayID':'team2ID','awayTeam':'team2Name','awayScore':'team2Score'})
+
+    df_relative_record_away = df_matchup_merge.query('Week <= @relative_range')
+    df_relative_record_away = df_relative_record_away.rename(columns = {'homeID':'team2ID','homeTeam':'team2Name','homeScore':'team2Score','awayID':'team1ID','awayTeam':'team1Name','awayScore':'team1Score'})
+
+    df_relative_record = pd.concat([df_relative_record_home, df_relative_record_away])
+    df_relative_record = df_relative_record.assign(relative_wins='', relative_losses='')
+    df_relative_record.sort_values(by=['Week', 'team1Score'], ascending=[True, False], inplace=True)
+    df_relative_record.reset_index(inplace=True, drop=True)
+
+    for x in range(relative_range):
+        week = df_relative_record.query('Week == (@x+1)').copy()
+        for i, row in week.iterrows():
+            df_relative_record.loc[i,'relative_wins'] = ((x+1)*10) - (i+1)
+            df_relative_record.loc[i,'relative_losses'] = 10 - ((x+1)*10) + i
+        #print(f'{week}')
+
+    #pd.set_option('display.max_rows', None)
+    #pd.set_option('display.max_columns', None)
+    if logger:
+        logger.log_dataframe(df_relative_record, 'df_relative_record')
+
+    df_relative_record_total = pd.DataFrame(columns=['teamID', 'teamName', 'relative_wins_total', 'relative_losses_total', 'relative_record_total'])
+    for i in range(len(df_team)):
+        team = list(df_team.index.values.tolist())[i]
+        teamName = df_team.iloc[i, 0]
+        #determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMatchupPeriod, df_avgs, leagueName)
+        df_relative_record_total = df_relative_record_total.append({'teamID': team,
+                                                                    'teamName': teamName,
+                                                                    'relative_wins_total': df_relative_record.loc[df_relative_record['team1ID'] == team, 'relative_wins'].sum(),
+                                                                    'relative_losses_total': df_relative_record.loc[df_relative_record['team1ID'] == team, 'relative_losses'].sum(),
+                                                                    'relative_record_total': str(f"{df_relative_record.loc[df_relative_record['team1ID'] == team, 'relative_wins'].sum()} - {df_relative_record.loc[df_relative_record['team1ID'] == team, 'relative_losses'].sum()}")
+                                                                    },
+                                                                    ignore_index=True
+                                                                    )
+
+    #pd.set_option('display.max_rows', None)
+    #pd.set_option('display.max_columns', None)
+    if logger:
+        logger.log_dataframe(df_relative_record_total, 'df_relative_record_total')
+    
+
+    return df_relative_record, df_relative_record_total
 
 
 
@@ -158,15 +219,17 @@ def determine_win_loss_margins(df_matchup_merge, logger, leagueName):
     results_dir = os.path.join(script_dir, relative_results_dir)
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
-    plt.savefig(f'{results_dir}/winlossmargins.png', dpi=100, transparent=False)
+    plt.savefig(f'{results_dir}/winlossmargins.png', dpi=300, transparent=False)
 
 
 
-def calculate_weekly_averages(df_matchup_merge, logger):
+def calculate_weekly_averages(df_matchup_merge, logger, currentMatchupPeriod):
     """ calculate average scores per week for the league """
 
 
-    df_avgs = (df_matchup_merge
+    df_previous_matchup_merge = df_matchup_merge.query('Week < @currentMatchupPeriod').reset_index(drop=True)
+    
+    df_avgs = (df_previous_matchup_merge
         .filter(['Week', 'homeScore', 'awayScore'])
         .melt(id_vars=['Week'], value_name='Score')
         .groupby('Week')
@@ -299,7 +362,7 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
     results_dir = os.path.join(script_dir, relative_results_dir)
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
-    plt.savefig(f'{results_dir}{teamName}-lucky_unlucky_wins_losses', dpi=100, transparent=False)
+    plt.savefig(f'{results_dir}{teamName}-lucky_unlucky_wins_losses', dpi=300, transparent=False)
 
 
 
@@ -406,10 +469,12 @@ def main():
 
     df_matchup_merge = create_matchup_data(d, currentMatchupPeriod, logger, df_team)
     
+    df_relative_record, df_relative_record_total  = create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchupPeriod)
+    
     determine_win_loss_margins(df_matchup_merge, logger, leagueName)
     
-    df_avgs = calculate_weekly_averages(df_matchup_merge, logger)
-
+    df_avgs = calculate_weekly_averages(df_matchup_merge, logger, currentMatchupPeriod)
+    
     for i in range(len(df_team)):
         team = list(df_team.index.values.tolist())[i]
         teamName = df_team.iloc[i, 0]
@@ -417,7 +482,8 @@ def main():
 
     plt.show()
     
-    print(f'Files generated. Are you lucky or unlucky?')
+
+    print(f'All done. Are you lucky or unlucky?\n')
 
 if __name__ == '__main__':
     main()
