@@ -76,8 +76,8 @@ def create_team_dataframe(d, logger):
     #print(f"\n === df_team DataFrame [{len(df_team)} rows x {len(df_team.columns)} columns] ==== \n{df_team}\n")
     if logger:
         logger.log_dataframe(df_team, 'df_team')
-    
-    
+
+
     return df_team
 
 
@@ -124,7 +124,7 @@ def create_matchup_data(d, currentMatchupPeriod, logger, df_team):
     #print(f"\n === df_matchup_merge DataFrame [{len(df_matchup_merge)} rows x {len(df_matchup_merge.columns)} columns] === \n{df_matchup_merge.head()}")
     if logger:
         logger.log_dataframe(df_matchup_merge, 'df_matchup_merge')
-    
+
     return df_matchup_merge
 
 
@@ -179,7 +179,105 @@ def create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchu
     #pd.set_option('display.max_columns', None)
     if logger:
         logger.log_dataframe(df_relative_record_total, 'df_relative_record_total')
-    
+
+    fig, ax = plt.subplots(1,1, figsize=(10,10))
+
+    # hide axes
+    fig.patch.set_visible(False)
+    ax.axis('off')
+    ax.axis('tight')
+
+    ax.table(cellText=df_relative_record_total.values, colLabels=df_relative_record_total.columns, loc='center')
+
+    fig.tight_layout()
+
+    #plt.show()
+
+
+    '''
+    # EXAMPLE FROM https://towardsdatascience.com/simple-little-tables-with-matplotlib-9780ef5d0bc4
+
+    # Let's try and create a nice looking table in matplotlib for the relative record summary data!!
+
+    title_text = 'Overall Relative Records'
+    footer_text = 'as of Week <variablize this>'
+    fig_background_color = 'skyblue'
+    fig_border = 'steelblue'
+
+    data =  [
+                [         'Freeze', 'Wind', 'Flood', 'Quake', 'Hail'],
+                [ '5 year',  66386, 174296,   75131,  577908,  32015],
+                ['10 year',  58230, 381139,   78045,   99308, 160454],
+                ['20 year',  89135,  80552,  152558,  497981, 603535],
+                ['30 year',  78415,  81858,  150656,  193263,  69638],
+                ['40 year', 139361, 331509,  343164,  781380,  52269],
+            ]
+
+    print(f'data table\n{data}')
+
+    # Pop the headers from the dataframe
+    column_headers = data.pop(0)
+    row_headers = [x.pop(0) for x in data]
+
+    # Table data needs to be non-numeric text. Format the data while we are at it
+    cell_text = []
+    for row in data:
+        cell_text.append([f'{x/1000:1.1f}' for x in row])
+
+    # Get some lists of color specs for row and column headers
+    rcolors = plt.cm.BuPu(np.full(len(row_headers), 0.1))
+    ccolors = plt.cm.BuPu(np.full(len(column_headers), 0.1))
+
+    # Create the figure. Setting a small pad on tight_layout
+    # seems to better regulate white space. Sometimes experimenting
+    # with an explicit figsize here can produce better outcome.
+    plt.figure(linewidth=2,
+            edgecolor=fig_border,
+            facecolor=fig_background_color,
+            tight_layout={'pad':1},
+            #figsize=(5,3)
+            )
+
+    # Add a table at the bottom of the axes
+    the_table = plt.table(cellText=cell_text,
+                        rowLabels=row_headers,
+                        rowColours=rcolors,
+                        rowLoc='right',
+                        colColours=ccolors,
+                        colLabels=column_headers,
+                        loc='center')
+
+    # Scaling is the only influence we have over top and bottom cell padding.
+    # Make the rows taller (i.e., make cell y scale larger).
+    the_table.scale(1, 1.5)
+    # Hide axes
+    ax = plt.gca()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+
+    # Hide axes border
+    plt.box(on=None)
+    # Add title
+    plt.suptitle(title_text)
+    # Add footer
+    plt.figtext(0.95, 0.05, footer_text, horizontalalignment='right', size=6, weight='light')
+    # Force the figure to update, so backends center objects correctly within the figure.
+    # Without plt.draw() here, the title will center on the axes and not the figure.
+    plt.draw()
+    # Create image. plt.savefig ignores figure edge and face colors, so map them.
+    fig = plt.gcf()
+
+    plt.savefig('pyplot-table-demo.png',
+                #bbox='tight',
+                edgecolor=fig.get_edgecolor(),
+                facecolor=fig.get_facecolor(),
+                dpi=100
+                )
+
+    plt.show()
+    '''
+
+
 
     return df_relative_record, df_relative_record_total
 
@@ -219,7 +317,7 @@ def determine_win_loss_margins(df_matchup_merge, logger, leagueName):
     results_dir = os.path.join(script_dir, relative_results_dir)
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
-    plt.savefig(f'{results_dir}/winlossmargins.png', dpi=300, transparent=False)
+    plt.savefig(f'{results_dir}/winlossmargins.png', dpi=100, transparent=False)
 
 
 
@@ -228,7 +326,7 @@ def calculate_weekly_averages(df_matchup_merge, logger, currentMatchupPeriod):
 
 
     df_previous_matchup_merge = df_matchup_merge.query('Week < @currentMatchupPeriod').reset_index(drop=True)
-    
+
     df_avgs = (df_previous_matchup_merge
         .filter(['Week', 'homeScore', 'awayScore'])
         .melt(id_vars=['Week'], value_name='Score')
@@ -256,7 +354,7 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
     ix = list(df_team_luck['awayID'] == team)
     df_team_luck.loc[ix, ['homeID','homeTeam','homeScore','awayID','awayTeam','awayScore']] = \
         df_team_luck.loc[ix, ['awayID','awayTeam','awayScore','homeID','homeTeam','homeScore']].values
-    
+
     # add new score and wins columns
     df_team_luck = (df_team_luck
         .assign(Chg1 = df_team_luck['homeScore'] - df_avgs['Score'],
@@ -265,7 +363,7 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
 
     # Replace BYE week opponent scores of 0 with the weekly average
     df_team_luck.loc[df_team_luck.awayScore == 0, 'Chg2'] = 0
-    
+
     # Replace BYE week opponent scopes of 0 with the weekly average -- longer way of doing it
     '''
     mask = df_team_luck.awayScore == 0
@@ -273,7 +371,7 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
     df_team_luck.loc[mask, column_name] = 0
     '''
 
-    df_team_luck.sort_values(by=['Week'], inplace=True, ascending=True)   
+    df_team_luck.sort_values(by=['Week'], inplace=True, ascending=True)
     #print(f"\n === df_team_luck DataFrame [{len(df_team_luck)} rows x {len(df_team_luck.columns)} columns] === \n{df_team_luck}")
     if logger:
         logger.log_dataframe(df_team_luck, f'df_team_luck==> {team}: {teamName}')
@@ -289,26 +387,26 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
     ax.fill_between([0,z], [0,z], z, facecolor='r', alpha=0.1)
     ax.fill_between([-z,0], [-z,0], 0, facecolor='r', alpha=0.1)
 
-    ax.scatter(data=df_team_luck.query('Win and (Type == "Regular")'), x='Chg1', y='Chg2', 
-        c='b', 
+    ax.scatter(data=df_team_luck.query('Win and (Type == "Regular")'), x='Chg1', y='Chg2',
+        c='b',
         s=100,
         marker='o',
-        label='Win - Regular Season') 
-    ax.scatter(data=df_team_luck.query('Win and (Type == "Playoff")'), x='Chg1', y='Chg2', 
-        c='r', 
+        label='Win - Regular Season')
+    ax.scatter(data=df_team_luck.query('Win and (Type == "Playoff")'), x='Chg1', y='Chg2',
+        c='r',
         s=100,
         marker='o',
-        label='Win - Playoffs') 
-    ax.scatter(data=df_team_luck.query('(not Win) and (Type == "Regular")'), x='Chg1', y='Chg2', 
-        c='b', 
+        label='Win - Playoffs')
+    ax.scatter(data=df_team_luck.query('(not Win) and (Type == "Regular")'), x='Chg1', y='Chg2',
+        c='b',
         s=100,
         marker='x',
-        label='Loss - Regular Season') 
-    ax.scatter(data=df_team_luck.query('(not Win) and (Type == "Playoff")'), x='Chg1', y='Chg2', 
-        c='r', 
+        label='Loss - Regular Season')
+    ax.scatter(data=df_team_luck.query('(not Win) and (Type == "Playoff")'), x='Chg1', y='Chg2',
+        c='r',
         s=100,
         marker='x',
-        label='Loss - Playoffs') 
+        label='Loss - Playoffs')
     ax.plot([-z,z],[-z,z], 'k--')
     ax.legend()
 
@@ -354,7 +452,7 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
                         textcoords="offset points", # how to position the texxt
                         xytext=(0,10), # distance from text to points (x,y)
                         ha='center') # horizontal alignment can be left, right or center
-    
+
     plt.tight_layout(pad=3)
 
     script_dir = os.path.dirname(__file__)
@@ -362,13 +460,13 @@ def determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMat
     results_dir = os.path.join(script_dir, relative_results_dir)
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
-    plt.savefig(f'{results_dir}{teamName}-lucky_unlucky_wins_losses', dpi=300, transparent=False)
+    plt.savefig(f'{results_dir}{teamName}-lucky_unlucky_wins_losses', dpi=100, transparent=False)
 
 
 
 def construct_url():
     """Construct a url based on year of league"""
-    
+
     '''
     ESPN has completely different API enpoints for leagues in current year vs. historical leagues
     Depending on the year being scraped need to construct the correct API endpoint
@@ -398,14 +496,14 @@ def fetch_league_data():
     '''
     Public vs. Private Leagues
 
-    If league is viewable to public can just call the API 
+    If league is viewable to public can just call the API
     If league is not viewable to public need to call the API with some stored session cookies
     for now these need to be stored/input in ./constants/priv_constants.py
         league_id
         swid
         espn_s2
     '''
-    
+
     if league_open_to_public:
         r = requests.get(url)
     else:
@@ -421,7 +519,7 @@ def fetch_league_data():
     if year > 2017:
         d = r.json()
     else:
-        d = r.json()[0] 
+        d = r.json()[0]
 
     # This is useful if you want to dump the requested data into a json file for analysis of the data structure
     #with open('apidump.json', 'w') as json_file:
@@ -442,11 +540,11 @@ def main():
     If you want to put debug data in a file pipe to a file
         python3 espnffscraper.py --debub > debut.txt (or any filename yuo want)
 
-    
+
     Public vs. Private Leagues
-        If league is viewable to public can just call the API 
+        If league is viewable to public can just call the API
         If league is not viewable to public need to call the API with some stored session cookies
-    
+
     For now these need to be stored/input in ./constants/priv_constants.py
         league_id = <your league ID>
         swid = <your swid>
@@ -468,23 +566,22 @@ def main():
     df_team = create_team_dataframe(d, logger)
 
     df_matchup_merge = create_matchup_data(d, currentMatchupPeriod, logger, df_team)
-    
+
     df_relative_record, df_relative_record_total  = create_relative_record_data(df_team, df_matchup_merge, logger, currentMatchupPeriod)
-    
+
     determine_win_loss_margins(df_matchup_merge, logger, leagueName)
-    
+
     df_avgs = calculate_weekly_averages(df_matchup_merge, logger, currentMatchupPeriod)
-    
+
     for i in range(len(df_team)):
         team = list(df_team.index.values.tolist())[i]
         teamName = df_team.iloc[i, 0]
         determine_lucky_results(team, teamName, df_matchup_merge, logger, currentMatchupPeriod, df_avgs, leagueName)
 
     plt.show()
-    
+
 
     print(f'All done. Are you lucky or unlucky?\n')
-
 if __name__ == '__main__':
     main()
 
