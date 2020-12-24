@@ -11,7 +11,7 @@ With `Git`:
 ```bash
 git clone https://github.com/cdpeca/espnffscraper.git
 cd espnffscraper
-python3 setup.py install
+pip install -r requirements.txt
 ```
 
 ## Usage
