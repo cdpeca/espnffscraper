@@ -19,7 +19,7 @@ league_open_to_public = True
 sport='nfl'
 
 try:
-    from constants.settings_local import *
+    from settings.settings_local import *
 except ImportError:
     pass
 
