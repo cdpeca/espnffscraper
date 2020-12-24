@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "espnffscraper"
+version = "1.3.0"
+description = "ESPN FF scraper that will produce some statistics on your league such as win/loss margins, lucky/unlucky win/loss analysis and \"Relative Results\" comparisons"
+authors = ["cdpeca <chrispeca+github@hotmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pandas = "^1.1.5"
+numpy = "^1.19.4"
+seaborn = "^0.11.0"
+matplotlib = "^3.3.3"
+requests = "^2.25.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
