@@ -538,10 +538,13 @@ def main():
 
 
     Public vs. Private Leagues
-        If league is viewable to public can just call the API
+        If league is viewable to public can just call the API, with the required league_id and year
         If league is not viewable to public need to call the API with some stored session cookies
 
-    For now these need to be stored/input in ./constants/priv_constants.py
+    All of these settings needs to be set in ./settings/settings.py
+    If you want to collaborate, contribute, share or host this in GitHub update the
+    ./settings/settings_local.py module instead. The settings.py will read the settings_local.py
+    and override the variables in settings.py if the settings_local.py module exists
         league_id = <your league ID>
         swid = <your swid>
         espn_s2 = <your espn_s2>
@@ -576,8 +579,10 @@ def main():
 
     plt.show()
 
-
     print(f'All done. Are you lucky or unlucky?\n')
+
+
+
 if __name__ == '__main__':
     main()
 
