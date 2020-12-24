@@ -8,7 +8,7 @@ import os
 import matplotlib
 #matplotlib.use("module://mplcairo.macosx")
 import matplotlib.pyplot as plt
-from constants.priv_constants import swid, espn_s2, league_id, year, sport, league_open_to_public
+from constants.settings import *
 from pathlib import Path
 from request.espn_requests import EspnFantasyRequests
 from utils.logger import Logger
