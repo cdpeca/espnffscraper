@@ -1,4 +1,4 @@
-" Set variables for accessing your private leage "
+" Set variables for accessing your private league "
 
 #SWID COOKIE
 swid = None
@@ -18,6 +18,7 @@ league_open_to_public = True
 # Set the sport for the ESPN fantasy league
 sport='nfl'
 
+# Override variables from settings/settings_local.py if this module exists
 try:
     from settings.settings_local import *
 except ImportError:
