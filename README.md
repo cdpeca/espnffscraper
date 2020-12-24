@@ -16,7 +16,19 @@ pip install -r requirements.txt
 
 ## Usage
 
-To utilize the program you will need your **league_id** and **year**. If you are using on private leagues you will also need two more parameters; your **swid** and **espn_s2** or **username** and **password**. To find your **swid** and **espn_s2** check out this [discussion](https://github.com/cwendt94/espn-api/discussions/150), from the creator of [espn-api](https://github.com/cwendt94/espn-api). A portion of this program is based on [espn-api](https://github.com/cwendt94/espn-api) (mostly the initial API URL constructor as it's abolustely wonderfully built). I would recommend to use credentials with your **swid** and **espn_s2** so it will work properly on both public and private leagues. This would also enable being able to use activity functions (although I haven't implemented that yet as this is really for some statiscal analysis).
+To utilize the program you will need your **league_id** and **year**. If you are using on private leagues you will also need two more parameters; your **swid** and **espn_s2**. To find your **swid** and **espn_s2** check out this [discussion](https://github.com/cwendt94/espn-api/discussions/150), from the creator of [espn-api](https://github.com/cwendt94/espn-api). A portion of this program is based on [espn-api](https://github.com/cwendt94/espn-api) (mostly the initial API URL constructor as it's absolutely wonderfully built). I would recommend to use credentials with your **swid** and **espn_s2** so it will work properly on both public and private leagues.
+
+If you will only run locally on your system update the required settings in `./settings/settings.py`
+
+If you want to collaborate, contribute, share or host this in GitHub update the `./settings/settings_local.py` module instead. The `settings.py` will read the `settings_local.py` and override the variables. The `settings_local.py` will be excluded from version control and git.
+
+You __must__ set the following settings/variables in order for this program to function...
+
+```
+league_id, year, league_open_to_public, swid (if private league), espn_s2 (if private league)
+```
+
+Once required settings are configured execute the program as follows in your local shell/terminal.
 
 ```bash
 python3 espnffscraper.py
@@ -53,7 +65,15 @@ Contributions, issues and feature requests are welcome!
 
 Feel free to check [issues page](https://github.com/cdpeca/espnffscraper/issues).
 
-
+If you want to run in a virtual environment you can you use your prefereed virtual environment module, however the base repostiory provides __Poetry__ configurations with the included `pyproject.toml` and `poetry.lock` files. To use just run
+```bash
+poetry install
+```
+after you have cloned the repository. You can run the program in this virtaul environment by executing
+```bash
+poetry run python3 espnffscraper.py
+```
+The `--debug` will work as usual in the virtual environment as well.
 
 ## Show your support
 
