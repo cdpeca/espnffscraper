@@ -2,7 +2,8 @@
 
 ### Custom exclusions ###
 # Needed to execute
-constants/
+*.PRIV
+settings_local.py
 
 # -- Locally used for testing or output --
 # used for dumping json extracts to files for data analysis
